@@ -17,6 +17,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
@@ -67,7 +69,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private fun Double.fmt(decimals: Int = 1) = String.format(Locale.GERMANY, "%.${decimals}f", this)
+internal fun Double.fmt(decimals: Int = 1) = String.format(Locale.GERMANY, "%.${decimals}f", this)
 
 private val timestampFormat = SimpleDateFormat("dd.MM.yyyy, HH:mm 'Uhr'", Locale.GERMANY)
 
@@ -102,10 +104,6 @@ private fun MainScreen(vm: MainViewModel, onOpenSettings: () -> Unit) {
             Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            vm.place?.let {
-                Text("Standort: ${it.label}", fontWeight = FontWeight.SemiBold)
-            } ?: TextButton(onClick = onOpenSettings) { Text("Standort in den Einstellungen festlegen") }
-
             Section("Innen") {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     WheelPicker(tempValues, vm.tempIn, vm::updateTempIn, "Temperatur", decimals = 1, unit = "°C", Modifier.weight(1f))
@@ -113,32 +111,88 @@ private fun MainScreen(vm: MainViewModel, onOpenSettings: () -> Unit) {
                 }
             }
 
-            if (vm.loading) LinearProgressIndicator(Modifier.fillMaxWidth())
-            vm.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-
-            if (vm.place != null) {
-                Section("Außen (OpenWeatherMap)") {
-                    val w = vm.weather
-                    if (w != null) {
-                        Text("${w.temp.fmt()} °C · ${w.humidity.fmt(0)} % rel. Feuchte · Wind ${w.wind.fmt()} m/s")
-                        if (w.description.isNotBlank()) Text(w.description.replaceFirstChar { it.uppercase() })
-                        Text(
-                            "Stand: ${timestampFormat.format(Date(w.fetchedAt))}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    } else {
-                        Text("Noch keine Wetterdaten vorhanden.")
-                    }
-                    FilledTonalButton(onClick = { vm.refreshWeather() }, enabled = !vm.loading) {
-                        Icon(Icons.Filled.Refresh, contentDescription = null, Modifier.size(ButtonDefaults.IconSize))
-                        Spacer(Modifier.width(ButtonDefaults.IconSpacing))
-                        Text("Aktualisieren")
-                    }
-                }
-            }
+            OutdoorSection(vm, onOpenSettings)
 
             vm.result?.let { ResultCard(it) }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun OutdoorSection(vm: MainViewModel, onOpenSettings: () -> Unit) {
+    Section("Außen") {
+        val modes = listOf("Wetterdienst", "Manuell")
+        SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+            modes.forEachIndexed { i, label ->
+                SegmentedButton(
+                    selected = vm.manualOut == (i == 1),
+                    onClick = { vm.updateManualOut(i == 1) },
+                    shape = SegmentedButtonDefaults.itemShape(i, modes.size),
+                ) { Text(label) }
+            }
+        }
+
+        if (vm.manualOut) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                WheelPicker(tempOutValues, vm.tempOut, vm::updateTempOut, "Temperatur", decimals = 1, unit = "°C", Modifier.weight(1f))
+                WheelPicker(rhValues, vm.rhOut, vm::updateRhOut, "rel. Feuchte", decimals = 0, unit = "%", Modifier.weight(1f))
+            }
+            Text(
+                "Wind",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            val winds = Ventilation.Wind.entries
+            SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                winds.forEachIndexed { i, wind ->
+                    SegmentedButton(
+                        selected = vm.windOut == wind,
+                        onClick = { vm.updateWindOut(wind) },
+                        shape = SegmentedButtonDefaults.itemShape(i, winds.size),
+                        icon = {},
+                    ) { Text(wind.label, maxLines = 1) }
+                }
+            }
+            return@Section
+        }
+
+        val place = vm.place
+        if (place == null) {
+            OutlinedButton(onClick = onOpenSettings) {
+                Icon(Icons.Filled.Place, contentDescription = null, Modifier.size(ButtonDefaults.IconSize))
+                Spacer(Modifier.width(ButtonDefaults.IconSpacing))
+                Text("Standort festlegen")
+            }
+            return@Section
+        }
+
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Filled.Place, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+            Spacer(Modifier.width(8.dp))
+            Text(place.label, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+            IconButton(onClick = onOpenSettings) {
+                Icon(Icons.Filled.Edit, contentDescription = "Standort ändern")
+            }
+        }
+        val w = vm.weather
+        if (w != null) {
+            Text("${w.temp.fmt()} °C · ${w.humidity.fmt(0)} % rel. Feuchte · Wind ${w.wind.fmt()} m/s")
+            if (w.description.isNotBlank()) Text(w.description.replaceFirstChar { it.uppercase() })
+            Text(
+                "Stand: ${timestampFormat.format(Date(w.fetchedAt))}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        } else {
+            Text("Noch keine Wetterdaten vorhanden.")
+        }
+        if (vm.loading) LinearProgressIndicator(Modifier.fillMaxWidth())
+        vm.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+        FilledTonalButton(onClick = { vm.refreshWeather() }, enabled = !vm.loading) {
+            Icon(Icons.Filled.Refresh, contentDescription = null, Modifier.size(ButtonDefaults.IconSize))
+            Spacer(Modifier.width(ButtonDefaults.IconSpacing))
+            Text("Aktualisieren")
         }
     }
 }
@@ -218,6 +272,7 @@ private fun Section(title: String, content: @Composable ColumnScope.() -> Unit) 
 }
 
 private val tempValues = (-20..80).map { it * 0.5 }
+private val tempOutValues = (-60..90).map { it * 0.5 }
 private val rhValues = (0..100).map { it.toDouble() }
 
 @Composable

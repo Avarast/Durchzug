@@ -25,13 +25,57 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     var loading by mutableStateOf(false)
     var error by mutableStateOf<String?>(null)
 
+    var manualOut by mutableStateOf(storage.manualOut)
+        private set
+    var tempOut by mutableStateOf(storage.tempOut ?: "10")
+        private set
+    var rhOut by mutableStateOf(storage.rhOut ?: "70")
+        private set
+    var windOut by mutableStateOf(storage.windOut ?: Ventilation.Wind.LIGHT)
+        private set
+
     val result: Ventilation.Result?
         get() {
-            val t = tempIn.replace(',', '.').toDoubleOrNull() ?: return null
-            val rh = rhIn.replace(',', '.').toDoubleOrNull()?.takeIf { it in 0.0..100.0 } ?: return null
-            val w = weather ?: return null
-            return Ventilation.calculate(t, rh, w.temp, w.humidity, w.wind)
+            val t = tempIn.parse() ?: return null
+            val rh = rhIn.parse()?.takeIf { it in 0.0..100.0 } ?: return null
+            return if (manualOut) {
+                val tOut = tempOut.parse() ?: return null
+                val rhO = rhOut.parse()?.takeIf { it in 0.0..100.0 } ?: return null
+                Ventilation.calculate(t, rh, tOut, rhO, windOut.ms)
+            } else {
+                val w = weather ?: return null
+                Ventilation.calculate(t, rh, w.temp, w.humidity, w.wind)
+            }
         }
+
+    private fun String.parse() = replace(',', '.').toDoubleOrNull()
+
+    fun updateManualOut(manual: Boolean) {
+        // Start manual input from the last weather data if no own values exist yet.
+        val w = weather
+        if (manual && storage.tempOut == null && w != null) {
+            updateTempOut((Math.round(w.temp * 2) / 2.0).fmt(1))
+            updateRhOut(w.humidity.fmt(0))
+            updateWindOut(Ventilation.Wind.fromMs(w.wind))
+        }
+        manualOut = manual
+        storage.manualOut = manual
+    }
+
+    fun updateTempOut(value: String) {
+        tempOut = value
+        storage.tempOut = value
+    }
+
+    fun updateRhOut(value: String) {
+        rhOut = value
+        storage.rhOut = value
+    }
+
+    fun updateWindOut(value: Ventilation.Wind) {
+        windOut = value
+        storage.windOut = value
+    }
 
     fun updateTempIn(value: String) {
         tempIn = value

@@ -23,6 +23,22 @@ class Storage(context: Context) {
         get() = prefs.getString(KEY_RH_IN, null) ?: "60"
         set(value) = prefs.edit { putString(KEY_RH_IN, value) }
 
+    var manualOut: Boolean
+        get() = prefs.getBoolean(KEY_MANUAL_OUT, false)
+        set(value) = prefs.edit { putBoolean(KEY_MANUAL_OUT, value) }
+
+    var tempOut: String?
+        get() = prefs.getString(KEY_TEMP_OUT, null)
+        set(value) = prefs.edit { putString(KEY_TEMP_OUT, value) }
+
+    var rhOut: String?
+        get() = prefs.getString(KEY_RH_OUT, null)
+        set(value) = prefs.edit { putString(KEY_RH_OUT, value) }
+
+    var windOut: Ventilation.Wind?
+        get() = prefs.getString(KEY_WIND_OUT, null)?.let { runCatching { Ventilation.Wind.valueOf(it) }.getOrNull() }
+        set(value) = prefs.edit { putString(KEY_WIND_OUT, value?.name) }
+
     private fun placeToJson(p: Place) = JSONObject()
         .put("name", p.name).put("country", p.country).put("state", p.state)
         .put("lat", p.lat).put("lon", p.lon)
@@ -52,5 +68,9 @@ class Storage(context: Context) {
         const val KEY_WEATHER = "weather"
         const val KEY_TEMP_IN = "tempIn"
         const val KEY_RH_IN = "rhIn"
+        const val KEY_MANUAL_OUT = "manualOut"
+        const val KEY_TEMP_OUT = "tempOut"
+        const val KEY_RH_OUT = "rhOut"
+        const val KEY_WIND_OUT = "windOut"
     }
 }

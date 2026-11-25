@@ -42,6 +42,23 @@ object Ventilation {
         return (base * windFactor * dtFactor).roundToInt().coerceIn(3, 30)
     }
 
+    /** Grobe Windstufen für die manuelle Eingabe mit repräsentativer Geschwindigkeit. */
+    enum class Wind(val label: String, val ms: Double) {
+        CALM("Still", 0.0),
+        LIGHT("Leicht", 2.0),
+        MODERATE("Mäßig", 4.5),
+        STRONG("Stark", 8.0);
+
+        companion object {
+            fun fromMs(ms: Double) = when {
+                ms <= 1 -> CALM
+                ms <= 3 -> LIGHT
+                ms <= 6 -> MODERATE
+                else -> STRONG
+            }
+        }
+    }
+
     data class Result(
         val ahIn: Double,
         val ahOut: Double,
