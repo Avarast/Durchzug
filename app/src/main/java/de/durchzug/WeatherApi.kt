@@ -20,6 +20,8 @@ data class Weather(
     val fetchedAt: Long = System.currentTimeMillis(),
 )
 
+class HttpException(val code: Int) : Exception("HTTP $code")
+
 class WeatherApi(private val apiKey: String = BuildConfig.OWM_API_KEY) {
 
     private suspend fun get(url: String): String = withContext(Dispatchers.IO) {
@@ -28,7 +30,7 @@ class WeatherApi(private val apiKey: String = BuildConfig.OWM_API_KEY) {
             conn.connectTimeout = 10_000
             conn.readTimeout = 10_000
             val code = conn.responseCode
-            if (code != 200) error("HTTP $code" + if (code == 401) " – API-Key ungültig oder noch nicht aktiv" else "")
+            if (code != 200) throw HttpException(code)
             conn.inputStream.bufferedReader().use { it.readText() }
         } finally {
             conn.disconnect()

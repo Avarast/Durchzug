@@ -6,7 +6,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
+import org.json.JSONException
+import java.net.ConnectException
+import java.net.SocketTimeoutException
+import java.net.UnknownHostException
 import kotlin.math.roundToInt
 
 class MainViewModel(app: Application) : AndroidViewModel(app) {
@@ -89,10 +94,25 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             setError(null)
             try {
                 block()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
-                setError("Fehler: ${e.message}")
+                setError(e.userMessage())
             }
             setLoading(false)
         }
+    }
+
+    private fun Exception.userMessage() = when (this) {
+        is UnknownHostException, is ConnectException -> "Keine Internetverbindung."
+        is SocketTimeoutException -> "Der Wetterdienst antwortet nicht. Bitte später erneut versuchen."
+        is HttpException -> when (code) {
+            401 -> "Der API-Key ist ungültig oder noch nicht aktiv."
+            429 -> "Zu viele Anfragen. Bitte später erneut versuchen."
+            in 500..599 -> "Der Wetterdienst ist gerade nicht erreichbar."
+            else -> "Anfrage fehlgeschlagen (Code $code)."
+        }
+        is JSONException -> "Unerwartete Antwort vom Wetterdienst."
+        else -> "Unbekannter Fehler. Bitte später erneut versuchen."
     }
 }
