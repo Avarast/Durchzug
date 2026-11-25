@@ -58,6 +58,27 @@ internal fun SettingsScreen(vm: MainViewModel, onBack: () -> Unit) {
                 vm.place?.let { Text("Gewählt: ${it.label}", fontWeight = FontWeight.SemiBold) }
             }
 
+            Section("Darstellung") {
+                Text("Design", style = MaterialTheme.typography.bodyLarge)
+                val modes = listOf(ThemeMode.SYSTEM to "System", ThemeMode.LIGHT to "Hell", ThemeMode.DARK to "Dunkel")
+                SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                    modes.forEachIndexed { i, (mode, label) ->
+                        SegmentedButton(
+                            selected = vm.themeMode == mode,
+                            onClick = { vm.themeMode = mode },
+                            shape = SegmentedButtonDefaults.itemShape(i, modes.size),
+                        ) { Text(label) }
+                    }
+                }
+                SwitchRow(
+                    title = "Reines Schwarz",
+                    description = "Schwarzer statt dunkelgrauer Hintergrund im dunklen Design, ideal für AMOLED-Displays.",
+                    checked = vm.pureBlack,
+                    onCheckedChange = { vm.pureBlack = it },
+                    enabled = vm.themeMode != ThemeMode.LIGHT,
+                )
+            }
+
             Section("Wetterdaten") {
                 SwitchRow(
                     title = "Beim Start aktualisieren",

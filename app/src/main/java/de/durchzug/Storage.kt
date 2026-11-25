@@ -13,6 +13,7 @@ import kotlin.reflect.KProperty
 /** Observable Compose state that is written to [SharedPreferences] on every change. */
 class Pref<T>(initial: T, private val save: (T) -> Unit) : ReadWriteProperty<Any?, T> {
     private var state by mutableStateOf(initial)
+    val value get() = state
     override fun getValue(thisRef: Any?, property: KProperty<*>) = state
     override fun setValue(thisRef: Any?, property: KProperty<*>, value: T) {
         state = value
@@ -35,6 +36,9 @@ class Storage(context: Context) {
     val windOut = pref("windOut", Ventilation.Wind.LIGHT, Ventilation.Wind::valueOf, { it.name })
 
     val autoRefresh = pref("autoRefresh", false, String::toBooleanStrict, Boolean::toString)
+
+    val themeMode = pref("themeMode", ThemeMode.SYSTEM, ThemeMode::valueOf, { it.name })
+    val pureBlack = pref("pureBlack", false, String::toBooleanStrict, Boolean::toString)
 
     /** Whether manual outdoor values have been entered before. */
     val hasManualOut get() = prefs.contains("tempOut")

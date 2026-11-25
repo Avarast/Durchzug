@@ -30,6 +30,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     var weather by storage.weather
         private set
     var autoRefresh by storage.autoRefresh
+    var themeMode by storage.themeMode
+    var pureBlack by storage.pureBlack
 
     var query by mutableStateOf("")
     var places by mutableStateOf<List<Place>>(emptyList())
