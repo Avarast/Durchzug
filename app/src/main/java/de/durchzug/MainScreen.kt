@@ -1,18 +1,24 @@
 package de.durchzug
 
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import java.util.Date
@@ -36,6 +42,8 @@ internal fun MainScreen(vm: MainViewModel, onOpenSettings: () -> Unit) {
             Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            vm.result?.let { RecommendationCard(it) }
+
             Section("Innen") {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     WheelPicker(tempInValues, vm.tempIn, { vm.tempIn = it }, "Temperatur", decimals = 1, unit = "°C", Modifier.weight(1f))
@@ -44,8 +52,6 @@ internal fun MainScreen(vm: MainViewModel, onOpenSettings: () -> Unit) {
             }
 
             OutdoorSection(vm, onOpenSettings)
-
-            vm.result?.let { ResultCard(it) }
         }
     }
 }
@@ -131,21 +137,49 @@ private fun WeatherOutdoor(vm: MainViewModel, place: Place, onOpenSettings: () -
 }
 
 @Composable
-private fun ResultCard(r: Ventilation.Result) {
-    val color = if (r.worthIt) Color(0xFF2E7D32) else Color(0xFFC62828)
-    Section("Ergebnis") {
-        Text(
-            if (r.worthIt) "Lüften lohnt sich!" else "Lüften nicht empfehlenswert",
-            color = color,
-            style = MaterialTheme.typography.titleLarge,
+private fun RecommendationCard(r: Ventilation.Result) {
+    var expanded by rememberSaveable { mutableStateOf(false) }
+    val colors = if (r.worthIt) {
+        CardDefaults.elevatedCardColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer,
+            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
         )
-        Text("Absolute Feuchte innen: ${r.ahIn.fmt()} g/m³")
-        Text("Absolute Feuchte außen: ${r.ahOut.fmt()} g/m³")
-        Text("Rel. Feuchte nach dem Lüften: ${r.rhAfter.fmt(0)} %", fontWeight = FontWeight.SemiBold)
-        if (r.worthIt) {
-            Text("Empfohlene Lüftungsdauer: ${r.minutes} Minuten (Stoßlüften)", fontWeight = FontWeight.SemiBold)
-        } else {
-            Text("Die Außenluft enthält mehr Wasser als die Raumluft – Lüften würde die Feuchte im Raum erhöhen.")
+    } else {
+        CardDefaults.elevatedCardColors(
+            containerColor = MaterialTheme.colorScheme.errorContainer,
+            contentColor = MaterialTheme.colorScheme.onErrorContainer,
+        )
+    }
+    ElevatedCard(
+        onClick = { expanded = !expanded },
+        colors = colors,
+        modifier = Modifier.fillMaxWidth().animateContentSize(),
+    ) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Empfehlung", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                Icon(
+                    if (expanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
+                    contentDescription = if (expanded) "Details ausblenden" else "Details anzeigen",
+                )
+            }
+            Text(
+                if (r.worthIt) "Lüften lohnt sich!" else "Lüften nicht empfehlenswert",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.SemiBold,
+            )
+            if (r.worthIt) {
+                Text("${r.minutes} Minuten Stoßlüften", style = MaterialTheme.typography.titleMedium)
+            }
+            if (expanded) {
+                HorizontalDivider(Modifier.padding(vertical = 4.dp), color = LocalContentColor.current.copy(alpha = 0.3f))
+                Text("Absolute Feuchte innen: ${r.ahIn.fmt()} g/m³")
+                Text("Absolute Feuchte außen: ${r.ahOut.fmt()} g/m³")
+                Text("Rel. Feuchte nach dem Lüften: ${r.rhAfter.fmt(0)} %")
+                if (!r.worthIt) {
+                    Text("Die Außenluft enthält mehr Wasser als die Raumluft – Lüften würde die Feuchte im Raum erhöhen.")
+                }
+            }
         }
     }
 }
