@@ -11,16 +11,19 @@ import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.delay
 import java.util.Date
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -120,11 +123,7 @@ private fun WeatherOutdoor(vm: MainViewModel, place: Place, onOpenSettings: () -
         val wind = Ventilation.Wind.fromMs(w.wind).label.lowercase()
         Text("${w.temp.fmt()} °C · ${w.humidity.fmt(0)} % rel. Feuchte · Wind $wind (${w.wind.fmt()} m/s)")
         if (w.description.isNotBlank()) Text(w.description.replaceFirstChar { it.uppercase() })
-        Text(
-            "Stand: ${timestampFormat.format(Date(w.fetchedAt))}",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        Timestamp(w)
     } else {
         Text("Noch keine Wetterdaten vorhanden.")
     }
@@ -134,6 +133,34 @@ private fun WeatherOutdoor(vm: MainViewModel, place: Place, onOpenSettings: () -
         Icon(Icons.Filled.Refresh, contentDescription = null, Modifier.size(ButtonDefaults.IconSize))
         Spacer(Modifier.width(ButtonDefaults.IconSpacing))
         Text("Aktualisieren")
+    }
+}
+
+@Composable
+private fun Timestamp(w: Weather) {
+    val now by produceState(System.currentTimeMillis()) {
+        while (true) {
+            delay(60_000)
+            value = System.currentTimeMillis()
+        }
+    }
+    val stale = w.isStale(now)
+    Surface(
+        shape = MaterialTheme.shapes.small,
+        color = if (stale) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.secondaryContainer,
+        contentColor = if (stale) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSecondaryContainer,
+    ) {
+        Row(
+            Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            if (stale) Icon(Icons.Filled.Warning, contentDescription = null, Modifier.size(18.dp))
+            Text(
+                "Stand: ${timestampFormat.format(Date(w.fetchedAt))} · ${formatAge(now - w.fetchedAt)}",
+                style = MaterialTheme.typography.labelLarge,
+            )
+        }
     }
 }
 

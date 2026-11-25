@@ -18,7 +18,13 @@ data class Weather(
     val wind: Double,
     val description: String,
     val fetchedAt: Long = System.currentTimeMillis(),
-)
+) {
+    fun isStale(now: Long = System.currentTimeMillis()) = now - fetchedAt > STALE_AFTER_MS
+
+    companion object {
+        const val STALE_AFTER_MS = 60 * 60 * 1000L
+    }
+}
 
 class HttpException(val code: Int) : Exception("HTTP $code")
 

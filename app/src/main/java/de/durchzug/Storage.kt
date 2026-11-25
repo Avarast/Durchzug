@@ -34,6 +34,8 @@ class Storage(context: Context) {
     val rhOut = double("rhOut", 70.0)
     val windOut = pref("windOut", Ventilation.Wind.LIGHT, Ventilation.Wind::valueOf, { it.name })
 
+    val autoRefresh = pref("autoRefresh", false, String::toBooleanStrict, Boolean::toString)
+
     /** Whether manual outdoor values have been entered before. */
     val hasManualOut get() = prefs.contains("tempOut")
 

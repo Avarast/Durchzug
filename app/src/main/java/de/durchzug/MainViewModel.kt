@@ -29,6 +29,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         private set
     var weather by storage.weather
         private set
+    var autoRefresh by storage.autoRefresh
 
     var query by mutableStateOf("")
     var places by mutableStateOf<List<Place>>(emptyList())
@@ -41,6 +42,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         private set
     var weatherError by mutableStateOf<String?>(null)
         private set
+
+    init {
+        if (autoRefresh && !manualOut && weather?.isStale() != false) refreshWeather()
+    }
 
     val result: Ventilation.Result?
         get() = if (manualOut) {

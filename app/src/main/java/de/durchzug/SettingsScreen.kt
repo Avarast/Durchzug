@@ -3,6 +3,7 @@ package de.durchzug
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -10,7 +11,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
@@ -54,6 +57,46 @@ internal fun SettingsScreen(vm: MainViewModel, onBack: () -> Unit) {
                 }
                 vm.place?.let { Text("Gewählt: ${it.label}", fontWeight = FontWeight.SemiBold) }
             }
+
+            Section("Wetterdaten") {
+                SwitchRow(
+                    title = "Beim Start aktualisieren",
+                    description = "Ruft beim App-Start neue Wetterdaten ab, wenn die gespeicherten älter als eine Stunde sind. " +
+                        "Jeder Abruf zählt gegen das API-Kontingent.",
+                    checked = vm.autoRefresh,
+                    onCheckedChange = { vm.autoRefresh = it },
+                )
+            }
         }
+    }
+}
+
+@Composable
+internal fun SwitchRow(
+    title: String,
+    description: String?,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    enabled: Boolean = true,
+) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .toggleable(checked, enabled = enabled, role = Role.Switch, onValueChange = onCheckedChange)
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.bodyLarge)
+            if (description != null) {
+                Text(
+                    description,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+        Switch(checked = checked, onCheckedChange = null, enabled = enabled)
     }
 }
