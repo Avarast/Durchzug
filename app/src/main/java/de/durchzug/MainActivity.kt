@@ -12,6 +12,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.activity.compose.BackHandler
@@ -27,6 +28,8 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import java.text.SimpleDateFormat
+import java.util.Date
 import java.util.Locale
 
 class MainActivity : ComponentActivity() {
@@ -38,6 +41,8 @@ class MainActivity : ComponentActivity() {
 }
 
 private fun Double.fmt(decimals: Int = 1) = String.format(Locale.GERMANY, "%.${decimals}f", this)
+
+private val timestampFormat = SimpleDateFormat("dd.MM.yyyy, HH:mm 'Uhr'", Locale.GERMANY)
 
 @Composable
 fun App(vm: MainViewModel = viewModel()) {
@@ -84,11 +89,25 @@ private fun MainScreen(vm: MainViewModel, onOpenSettings: () -> Unit) {
             if (vm.loading) LinearProgressIndicator(Modifier.fillMaxWidth())
             vm.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
 
-            vm.weather?.let { w ->
+            if (vm.place != null) {
                 Section("Außen (OpenWeatherMap)") {
-                    Text("${w.temp.fmt()} °C · ${w.humidity.fmt(0)} % rel. Feuchte · Wind ${w.wind.fmt()} m/s")
-                    if (w.description.isNotBlank()) Text(w.description.replaceFirstChar { it.uppercase() })
-                    TextButton(onClick = { vm.refreshWeather() }) { Text("Aktualisieren") }
+                    val w = vm.weather
+                    if (w != null) {
+                        Text("${w.temp.fmt()} °C · ${w.humidity.fmt(0)} % rel. Feuchte · Wind ${w.wind.fmt()} m/s")
+                        if (w.description.isNotBlank()) Text(w.description.replaceFirstChar { it.uppercase() })
+                        Text(
+                            "Stand: ${timestampFormat.format(Date(w.fetchedAt))}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    } else {
+                        Text("Noch keine Wetterdaten vorhanden.")
+                    }
+                    FilledTonalButton(onClick = { vm.refreshWeather() }, enabled = !vm.loading) {
+                        Icon(Icons.Filled.Refresh, contentDescription = null, Modifier.size(ButtonDefaults.IconSize))
+                        Spacer(Modifier.width(ButtonDefaults.IconSpacing))
+                        Text("Aktualisieren")
+                    }
                 }
             }
 

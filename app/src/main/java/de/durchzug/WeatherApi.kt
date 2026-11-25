@@ -12,7 +12,13 @@ data class Place(val name: String, val country: String, val state: String?, val 
     val label get() = listOfNotNull(name, state, country).joinToString(", ")
 }
 
-data class Weather(val temp: Double, val humidity: Double, val wind: Double, val description: String)
+data class Weather(
+    val temp: Double,
+    val humidity: Double,
+    val wind: Double,
+    val description: String,
+    val fetchedAt: Long = System.currentTimeMillis(),
+)
 
 class WeatherApi(private val apiKey: String = BuildConfig.OWM_API_KEY) {
 
