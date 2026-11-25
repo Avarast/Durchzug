@@ -42,8 +42,8 @@ internal val rhValues = (0..100).map { it.toDouble() }
 @Composable
 internal fun WheelPicker(
     values: List<Double>,
-    value: String,
-    onChange: (String) -> Unit,
+    value: Double,
+    onChange: (Double) -> Unit,
     label: String,
     decimals: Int,
     unit: String,
@@ -51,10 +51,9 @@ internal fun WheelPicker(
 ) {
     val itemHeight = 40.dp
     val itemHeightPx = with(LocalDensity.current) { itemHeight.toPx() }
-    val parsed = value.replace(',', '.').toDoubleOrNull()
-    val targetIndex = parsed?.let { p -> values.indices.minBy { abs(values[it] - p) } }
+    val targetIndex = values.indices.minBy { abs(values[it] - value) }
 
-    val state = rememberLazyListState(initialFirstVisibleItemIndex = targetIndex ?: 0)
+    val state = rememberLazyListState(initialFirstVisibleItemIndex = targetIndex)
     val centerIndex by remember {
         derivedStateOf {
             state.firstVisibleItemIndex + if (state.firstVisibleItemScrollOffset > itemHeightPx / 2) 1 else 0
@@ -68,7 +67,7 @@ internal fun WheelPicker(
 
     // Follow typed input when the wheel is idle.
     LaunchedEffect(targetIndex) {
-        if (targetIndex != null && !state.isScrollInProgress && targetIndex != centerIndex) {
+        if (!state.isScrollInProgress && targetIndex != centerIndex) {
             state.scrollToItem(targetIndex)
         }
     }
@@ -76,7 +75,7 @@ internal fun WheelPicker(
     LaunchedEffect(state) {
         snapshotFlow { state.isScrollInProgress }.drop(1).filter { !it }.collect {
             val i = centerIndex.coerceIn(values.indices)
-            if (i != currentTarget) currentOnChange(values[i].fmt(decimals))
+            if (i != currentTarget) currentOnChange(values[i])
         }
     }
     LaunchedEffect(state) {
@@ -107,7 +106,7 @@ internal fun WheelPicker(
                 items(values.size) { i ->
                     val selected = i == centerIndex
                     // Show the exact typed value if it lies between two wheel steps.
-                    val text = if (selected && i == targetIndex && parsed != values[i]) value else values[i].fmt(decimals)
+                    val text = if (selected && i == targetIndex && value != values[i]) value.fmtCompact() else values[i].fmt(decimals)
                     Box(
                         Modifier.fillMaxWidth().height(itemHeight).clickable(
                             onClickLabel = if (selected) "Wert eingeben" else "Wert auswählen",
@@ -128,12 +127,9 @@ internal fun WheelPicker(
                 }
             }
             if (editing) {
-                WheelInput(value, unit, itemHeight) { input ->
+                WheelInput(value.fmtCompact(), unit, itemHeight) { input ->
                     editing = false
-                    val number = input.replace(',', '.').toDoubleOrNull() ?: return@WheelInput
-                    val min = values.first()
-                    val max = values.last()
-                    onChange(if (number in min..max) input else number.coerceIn(min, max).fmt(decimals))
+                    input.parseDecimal()?.let { onChange(it.coerceIn(values.first(), values.last())) }
                 }
             }
         }
@@ -150,7 +146,7 @@ private fun WheelInput(initial: String, unit: String, height: Dp, onDone: (Strin
     fun finish() {
         if (finished) return
         finished = true
-        currentOnDone(text.text.trim())
+        currentOnDone(text.text)
     }
 
     LaunchedEffect(Unit) { focusRequester.requestFocus() }

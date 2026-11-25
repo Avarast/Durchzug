@@ -1,43 +1,50 @@
 package de.durchzug
 
 import android.content.Context
+import android.content.SharedPreferences
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.core.content.edit
 import org.json.JSONObject
+import kotlin.properties.ReadWriteProperty
+import kotlin.reflect.KProperty
+
+/** Observable Compose state that is written to [SharedPreferences] on every change. */
+class Pref<T>(initial: T, private val save: (T) -> Unit) : ReadWriteProperty<Any?, T> {
+    private var state by mutableStateOf(initial)
+    override fun getValue(thisRef: Any?, property: KProperty<*>) = state
+    override fun setValue(thisRef: Any?, property: KProperty<*>, value: T) {
+        state = value
+        save(value)
+    }
+}
 
 class Storage(context: Context) {
     private val prefs = context.getSharedPreferences("durchzug", Context.MODE_PRIVATE)
 
-    var place: Place?
-        get() = prefs.getString(KEY_PLACE, null)?.let { runCatching { placeFromJson(JSONObject(it)) }.getOrNull() }
-        set(value) = prefs.edit { putString(KEY_PLACE, value?.let { placeToJson(it).toString() }) }
+    val place = pref("place", null, { placeFromJson(JSONObject(it)) }, { it?.let(::placeToJson)?.toString() })
+    val weather = pref("weather", null, { weatherFromJson(JSONObject(it)) }, { it?.let(::weatherToJson)?.toString() })
 
-    var weather: Weather?
-        get() = prefs.getString(KEY_WEATHER, null)?.let { runCatching { weatherFromJson(JSONObject(it)) }.getOrNull() }
-        set(value) = prefs.edit { putString(KEY_WEATHER, value?.let { weatherToJson(it).toString() }) }
+    val tempIn = double("tempIn", 21.0)
+    val rhIn = double("rhIn", 60.0)
 
-    var tempIn: String
-        get() = prefs.getString(KEY_TEMP_IN, null) ?: "21"
-        set(value) = prefs.edit { putString(KEY_TEMP_IN, value) }
+    val manualOut = pref("manualOut", false, String::toBooleanStrict, Boolean::toString)
+    val tempOut = double("tempOut", 10.0)
+    val rhOut = double("rhOut", 70.0)
+    val windOut = pref("windOut", Ventilation.Wind.LIGHT, Ventilation.Wind::valueOf, { it.name })
 
-    var rhIn: String
-        get() = prefs.getString(KEY_RH_IN, null) ?: "60"
-        set(value) = prefs.edit { putString(KEY_RH_IN, value) }
+    /** Whether manual outdoor values have been entered before. */
+    val hasManualOut get() = prefs.contains("tempOut")
 
-    var manualOut: Boolean
-        get() = prefs.getBoolean(KEY_MANUAL_OUT, false)
-        set(value) = prefs.edit { putBoolean(KEY_MANUAL_OUT, value) }
+    private fun double(key: String, default: Double) =
+        pref(key, default, { it.replace(',', '.').toDouble() }, Double::toString)
 
-    var tempOut: String?
-        get() = prefs.getString(KEY_TEMP_OUT, null)
-        set(value) = prefs.edit { putString(KEY_TEMP_OUT, value) }
-
-    var rhOut: String?
-        get() = prefs.getString(KEY_RH_OUT, null)
-        set(value) = prefs.edit { putString(KEY_RH_OUT, value) }
-
-    var windOut: Ventilation.Wind?
-        get() = prefs.getString(KEY_WIND_OUT, null)?.let { runCatching { Ventilation.Wind.valueOf(it) }.getOrNull() }
-        set(value) = prefs.edit { putString(KEY_WIND_OUT, value?.name) }
+    private fun <T> pref(key: String, default: T, read: (String) -> T, write: (T) -> String?): Pref<T> {
+        // Older versions stored some values as non-string types, so read via toString().
+        val stored = prefs.all[key]?.toString()?.let { runCatching { read(it) }.getOrNull() }
+        return Pref(stored ?: default) { value -> prefs.edit { putString(key, write(value)) } }
+    }
 
     private fun placeToJson(p: Place) = JSONObject()
         .put("name", p.name).put("country", p.country).put("state", p.state)
@@ -62,15 +69,4 @@ class Storage(context: Context) {
         description = o.optString("description"),
         fetchedAt = o.getLong("fetchedAt"),
     )
-
-    private companion object {
-        const val KEY_PLACE = "place"
-        const val KEY_WEATHER = "weather"
-        const val KEY_TEMP_IN = "tempIn"
-        const val KEY_RH_IN = "rhIn"
-        const val KEY_MANUAL_OUT = "manualOut"
-        const val KEY_TEMP_OUT = "tempOut"
-        const val KEY_RH_OUT = "rhOut"
-        const val KEY_WIND_OUT = "windOut"
-    }
 }

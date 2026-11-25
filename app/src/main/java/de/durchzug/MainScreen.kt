@@ -38,8 +38,8 @@ internal fun MainScreen(vm: MainViewModel, onOpenSettings: () -> Unit) {
         ) {
             Section("Innen") {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    WheelPicker(tempInValues, vm.tempIn, vm::updateTempIn, "Temperatur", decimals = 1, unit = "°C", Modifier.weight(1f))
-                    WheelPicker(rhValues, vm.rhIn, vm::updateRhIn, "rel. Feuchte", decimals = 0, unit = "%", Modifier.weight(1f))
+                    WheelPicker(tempInValues, vm.tempIn, { vm.tempIn = it }, "Temperatur", decimals = 1, unit = "°C", Modifier.weight(1f))
+                    WheelPicker(rhValues, vm.rhIn, { vm.rhIn = it }, "rel. Feuchte", decimals = 0, unit = "%", Modifier.weight(1f))
                 }
             }
 
@@ -82,8 +82,8 @@ private fun OutdoorSection(vm: MainViewModel, onOpenSettings: () -> Unit) {
 @Composable
 private fun ManualOutdoor(vm: MainViewModel) {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        WheelPicker(tempOutValues, vm.tempOut, vm::updateTempOut, "Temperatur", decimals = 1, unit = "°C", Modifier.weight(1f))
-        WheelPicker(rhValues, vm.rhOut, vm::updateRhOut, "rel. Feuchte", decimals = 0, unit = "%", Modifier.weight(1f))
+        WheelPicker(tempOutValues, vm.tempOut, { vm.tempOut = it }, "Temperatur", decimals = 1, unit = "°C", Modifier.weight(1f))
+        WheelPicker(rhValues, vm.rhOut, { vm.rhOut = it }, "rel. Feuchte", decimals = 0, unit = "%", Modifier.weight(1f))
     }
     Text("Wind", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
     val winds = Ventilation.Wind.entries
@@ -91,7 +91,7 @@ private fun ManualOutdoor(vm: MainViewModel) {
         winds.forEachIndexed { i, wind ->
             SegmentedButton(
                 selected = vm.windOut == wind,
-                onClick = { vm.updateWindOut(wind) },
+                onClick = { vm.windOut = wind },
                 shape = SegmentedButtonDefaults.itemShape(i, winds.size),
                 icon = {},
             ) { Text(wind.label, maxLines = 1) }
