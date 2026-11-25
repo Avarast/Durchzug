@@ -117,7 +117,8 @@ private fun WeatherOutdoor(vm: MainViewModel, place: Place, onOpenSettings: () -
     }
     val w = vm.weather
     if (w != null) {
-        Text("${w.temp.fmt()} °C · ${w.humidity.fmt(0)} % rel. Feuchte · Wind ${w.wind.fmt()} m/s")
+        val wind = Ventilation.Wind.fromMs(w.wind).label.lowercase()
+        Text("${w.temp.fmt()} °C · ${w.humidity.fmt(0)} % rel. Feuchte · Wind $wind (${w.wind.fmt()} m/s)")
         if (w.description.isNotBlank()) Text(w.description.replaceFirstChar { it.uppercase() })
         Text(
             "Stand: ${timestampFormat.format(Date(w.fetchedAt))}",
