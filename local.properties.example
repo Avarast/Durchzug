@@ -1,0 +1,2 @@
+# Kopiere nach local.properties und trage deinen Key ein
+OWM_API_KEY=dein_openweathermap_key
