@@ -43,11 +43,11 @@ object Ventilation {
     }
 
     /** Grobe Windstufen für die manuelle Eingabe mit repräsentativer Geschwindigkeit. */
-    enum class Wind(val label: String, val ms: Double) {
-        CALM("Still", 0.0),
-        LIGHT("Leicht", 2.0),
-        MODERATE("Mäßig", 4.5),
-        STRONG("Stark", 8.0);
+    enum class Wind(val ms: Double) {
+        CALM(0.0),
+        LIGHT(2.0),
+        MODERATE(4.5),
+        STRONG(8.0);
 
         companion object {
             fun fromMs(ms: Double) = when {

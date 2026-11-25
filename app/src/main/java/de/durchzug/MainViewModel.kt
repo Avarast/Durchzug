@@ -22,8 +22,14 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         private set
     var weather by mutableStateOf(storage.weather)
         private set
-    var loading by mutableStateOf(false)
-    var error by mutableStateOf<String?>(null)
+    var searching by mutableStateOf(false)
+        private set
+    var searchError by mutableStateOf<String?>(null)
+        private set
+    var refreshing by mutableStateOf(false)
+        private set
+    var weatherError by mutableStateOf<String?>(null)
+        private set
 
     var manualOut by mutableStateOf(storage.manualOut)
         private set
@@ -87,9 +93,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         storage.rhIn = value
     }
 
-    fun search() = launchSafe {
+    fun search() = launchSafe({ searching = it }, { searchError = it }) {
         places = api.searchPlaces(query.trim())
-        if (places.isEmpty()) error = "Kein Ort gefunden"
+        if (places.isEmpty()) searchError = "Kein Ort gefunden"
     }
 
     fun select(p: Place) {
@@ -103,7 +109,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun refreshWeather() {
         val p = place ?: return
-        launchSafe {
+        launchSafe({ refreshing = it }, { weatherError = it }) {
             val w = api.currentWeather(p.lat, p.lon)
             if (place == p) {
                 weather = w
@@ -112,20 +118,24 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    private fun launchSafe(block: suspend () -> Unit) {
+    private fun launchSafe(
+        setLoading: (Boolean) -> Unit,
+        setError: (String?) -> Unit,
+        block: suspend () -> Unit,
+    ) {
         if (BuildConfig.OWM_API_KEY.isBlank()) {
-            error = "Kein OpenWeatherMap-API-Key in local.properties hinterlegt"
+            setError("Kein OpenWeatherMap-API-Key in local.properties hinterlegt")
             return
         }
         viewModelScope.launch {
-            loading = true
-            error = null
+            setLoading(true)
+            setError(null)
             try {
                 block()
             } catch (e: Exception) {
-                error = "Fehler: ${e.message}"
+                setError("Fehler: ${e.message}")
             }
-            loading = false
+            setLoading(false)
         }
     }
 }
