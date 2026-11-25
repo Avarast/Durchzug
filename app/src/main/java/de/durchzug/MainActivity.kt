@@ -10,8 +10,16 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
+import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -33,20 +41,82 @@ private fun Double.fmt(decimals: Int = 1) = String.format(Locale.GERMANY, "%.${d
 
 @Composable
 fun App(vm: MainViewModel = viewModel()) {
-    Column(
-        Modifier.fillMaxSize().systemBarsPadding().verticalScroll(rememberScrollState()).padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Text("Durchzug", style = MaterialTheme.typography.headlineMedium)
+    var showSettings by rememberSaveable { mutableStateOf(false) }
+    BackHandler(enabled = showSettings) { showSettings = false }
 
-        Section("Innen") {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                NumberField(vm.tempIn, { vm.tempIn = it }, "Temperatur (°C)", Modifier.weight(1f))
-                NumberField(vm.rhIn, { vm.rhIn = it }, "rel. Feuchte (%)", Modifier.weight(1f))
+    if (showSettings) {
+        SettingsScreen(vm, onBack = { showSettings = false })
+    } else {
+        MainScreen(vm, onOpenSettings = { showSettings = true })
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun MainScreen(vm: MainViewModel, onOpenSettings: () -> Unit) {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Durchzug") },
+                actions = {
+                    IconButton(onClick = onOpenSettings) {
+                        Icon(Icons.Filled.Settings, contentDescription = "Einstellungen")
+                    }
+                },
+            )
+        },
+    ) { padding ->
+        Column(
+            Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            vm.place?.let {
+                Text("Standort: ${it.label}", fontWeight = FontWeight.SemiBold)
+            } ?: TextButton(onClick = onOpenSettings) { Text("Standort in den Einstellungen festlegen") }
+
+            Section("Innen") {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    NumberField(vm.tempIn, { vm.tempIn = it }, "Temperatur (°C)", Modifier.weight(1f))
+                    NumberField(vm.rhIn, { vm.rhIn = it }, "rel. Feuchte (%)", Modifier.weight(1f))
+                }
             }
-        }
 
-        Section("Standort") {
+            if (vm.loading) LinearProgressIndicator(Modifier.fillMaxWidth())
+            vm.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+
+            vm.weather?.let { w ->
+                Section("Außen (OpenWeatherMap)") {
+                    Text("${w.temp.fmt()} °C · ${w.humidity.fmt(0)} % rel. Feuchte · Wind ${w.wind.fmt()} m/s")
+                    if (w.description.isNotBlank()) Text(w.description.replaceFirstChar { it.uppercase() })
+                    TextButton(onClick = { vm.refreshWeather() }) { Text("Aktualisieren") }
+                }
+            }
+
+            vm.result?.let { ResultCard(it) }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SettingsScreen(vm: MainViewModel, onBack: () -> Unit) {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Einstellungen") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Zurück")
+                    }
+                },
+            )
+        },
+    ) { padding ->
+        Column(
+            Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Section("Standort") {
             OutlinedTextField(
                 value = vm.query,
                 onValueChange = { vm.query = it },
@@ -60,23 +130,14 @@ fun App(vm: MainViewModel = viewModel()) {
                 },
             )
             vm.places.forEach { p ->
-                Text(p.label, Modifier.fillMaxWidth().clickable { vm.select(p) }.padding(vertical = 10.dp))
+                Text(p.label, Modifier.fillMaxWidth().clickable { vm.select(p); onBack() }.padding(vertical = 10.dp))
             }
             vm.place?.let { Text("Gewählt: ${it.label}", fontWeight = FontWeight.SemiBold) }
-        }
-
-        if (vm.loading) LinearProgressIndicator(Modifier.fillMaxWidth())
-        vm.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-
-        vm.weather?.let { w ->
-            Section("Außen (OpenWeatherMap)") {
-                Text("${w.temp.fmt()} °C · ${w.humidity.fmt(0)} % rel. Feuchte · Wind ${w.wind.fmt()} m/s")
-                if (w.description.isNotBlank()) Text(w.description.replaceFirstChar { it.uppercase() })
-                TextButton(onClick = { vm.refreshWeather() }) { Text("Aktualisieren") }
             }
-        }
 
-        vm.result?.let { ResultCard(it) }
+            if (vm.loading) LinearProgressIndicator(Modifier.fillMaxWidth())
+            vm.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+        }
     }
 }
 
