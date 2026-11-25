@@ -81,8 +81,8 @@ private fun MainScreen(vm: MainViewModel, onOpenSettings: () -> Unit) {
 
             Section("Innen") {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    NumberField(vm.tempIn, { vm.tempIn = it }, "Temperatur (°C)", Modifier.weight(1f))
-                    NumberField(vm.rhIn, { vm.rhIn = it }, "rel. Feuchte (%)", Modifier.weight(1f))
+                    NumberField(vm.tempIn, vm::updateTempIn, "Temperatur (°C)", Modifier.weight(1f))
+                    NumberField(vm.rhIn, vm::updateRhIn, "rel. Feuchte (%)", Modifier.weight(1f))
                 }
             }
 

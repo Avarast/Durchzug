@@ -12,8 +12,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val api = WeatherApi()
     private val storage = Storage(app)
 
-    var tempIn by mutableStateOf("21")
-    var rhIn by mutableStateOf("60")
+    var tempIn by mutableStateOf(storage.tempIn)
+        private set
+    var rhIn by mutableStateOf(storage.rhIn)
+        private set
     var query by mutableStateOf("")
     var places by mutableStateOf<List<Place>>(emptyList())
     var place by mutableStateOf(storage.place)
@@ -30,6 +32,16 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             val w = weather ?: return null
             return Ventilation.calculate(t, rh, w.temp, w.humidity, w.wind)
         }
+
+    fun updateTempIn(value: String) {
+        tempIn = value
+        storage.tempIn = value
+    }
+
+    fun updateRhIn(value: String) {
+        rhIn = value
+        storage.rhIn = value
+    }
 
     fun search() = launchSafe {
         places = api.searchPlaces(query.trim())
