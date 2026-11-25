@@ -1,0 +1,14 @@
+.gradle/
+build/
+local.properties
+.idea/
+*.iml
+
+# Kotlin / Android
+.kotlin/
+captures/
+*.jks
+*.keystore
+
+# Private notes
+notes.md
